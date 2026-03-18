@@ -25,7 +25,7 @@ Dataset paths are config-driven using `data_root` + relative names:
 
 ```text
 <data_root>/
-├── training_labels.csv
+├── train_labels.csv
 ├── training_images/
 │   ├── 000001.jpg
 │   └── ...
@@ -35,7 +35,7 @@ Dataset paths are config-driven using `data_root` + relative names:
 └── sample_submission.csv
 ```
 
-`training_labels.csv` must include columns:
+`train_labels.csv` must include columns:
 
 - `id` (image filename)
 - `label` (integer class)
