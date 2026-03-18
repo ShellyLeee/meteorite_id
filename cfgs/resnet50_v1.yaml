@@ -2,7 +2,7 @@ seed: 42
 device: auto
 output_dir: ./outputs/resnet50_v1
 
-data_root: /mnt/sharedata/ssd_large/users/liyx/kaggle
+data_root: /mnt/sharedata/ssd_large/users/liyx/kaggle/datasets
 train_csv: training_labels.csv
 train_image_dir: training_images
 test_image_dir: test_images
