@@ -45,7 +45,11 @@ Dataset paths are config-driven using `data_root` + relative names:
 ## Training
 
 ```bash
-python train.py --config cfgs/resnet50_v1.yaml
+# Default (uses cfgs/config.yaml)
+python train.py
+
+# Specify config file
+python train.py --config cfgs/config.yaml
 ```
 
 Best checkpoint is saved to:
@@ -55,10 +59,14 @@ Best checkpoint is saved to:
 ## Inference and Submission
 
 ```bash
+# Default checkpoint path
+python test.py --checkpoint outputs/resnet18_baseline/best_model.pt
+
+# Specify config, checkpoint, and output path
 python test.py \
-  --config cfgs/resnet50_v1.yaml \
-  --checkpoint outputs/resnet50_v1/best_model.pt \
-  --output_path outputs/resnet50_v1/submission.csv
+  --config cfgs/config.yaml \
+  --checkpoint outputs/resnet18_baseline/best_model.pt \
+  --output_path outputs/resnet18_baseline/submission.csv
 ```
 
 Workflow:
@@ -68,3 +76,17 @@ Workflow:
 3. Predict labels for each test image
 4. Map predictions to `sample_submission.csv` ids
 5. Save final CSV
+
+## GPU Configuration
+
+Edit `cfgs/config.yaml` to specify GPU device:
+
+```yaml
+device: cuda:0  # or cuda:1, cuda:2, etc.
+```
+
+Or use environment variable:
+
+```bash
+CUDA_VISIBLE_DEVICES=1 python train.py  # Uses GPU 1
+```
