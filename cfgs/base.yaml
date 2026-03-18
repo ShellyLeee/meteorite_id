@@ -1,0 +1,43 @@
+seed: 42
+device: auto
+output_dir: ./outputs/resnet18_baseline
+
+data_root: /mnt/sharedata/ssd_large/users/liyx/kaggle
+train_csv: training_labels.csv
+train_image_dir: training_images
+test_image_dir: test_images
+sample_submission_path: sample_submission.csv
+
+num_classes: 2
+image_size: 224
+batch_size: 32
+num_workers: 4
+val_ratio: 0.2
+
+model:
+  name: resnet18
+  pretrained: true
+
+loss:
+  name: cross_entropy
+  label_smoothing: 0.0
+
+optimizer:
+  name: adamw
+  lr: 0.0003
+  weight_decay: 0.0001
+
+scheduler:
+  name: cosine
+  t_max: 15
+  eta_min: 0.0
+
+train:
+  epochs: 15
+  early_stopping_patience: 5
+  monitor: f1
+
+aug:
+  train_flip_p: 0.5
+  train_rotation: 10
+  train_color_jitter: 0.2
