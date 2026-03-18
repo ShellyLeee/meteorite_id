@@ -17,7 +17,7 @@ A clean PyTorch baseline for Kaggle **meteorite-identification** (binary image c
 - `models/`: base model + backbones
 - `trainers/`: trainer and prediction/submission helpers
 - `train.py`: training entrypoint
-- `test_final.py`: inference + submission entrypoint
+- `test.py`: inference + submission entrypoint
 
 ## Expected Dataset Layout
 
@@ -55,7 +55,7 @@ Best checkpoint is saved to:
 ## Inference and Submission
 
 ```bash
-python test_final.py \
+python test.py \
   --config cfgs/resnet50_v1.yaml \
   --checkpoint outputs/resnet50_v1/best_model.pt \
   --output_path outputs/resnet50_v1/submission.csv

@@ -1,35 +1,32 @@
 """Inference and submission helpers."""
 
 from __future__ import annotations
-
+from tqdm import tqdm
 from pathlib import Path
 
 import pandas as pd
 import torch
+import os
 from torch.utils.data import DataLoader
 
 
 
-def predict(model: torch.nn.Module, loader: DataLoader, device: torch.device) -> dict[str, int]:
-    """Run test inference and return id-to-label predictions.
-
-    The dataloader must yield `(images, img_paths)` where `img_paths` are strings.
-    """
+def predict(model, loader, device):
     model.eval()
-    id_to_pred: dict[str, int] = {}
+    id_to_pred = {}
 
     with torch.no_grad():
-        for images, img_paths in loader:
+        for images, img_paths in tqdm(loader, desc="Predicting", leave=False):
             images = images.to(device, non_blocking=True)
-            logits = model(images)
-            preds = logits.argmax(dim=1).detach().cpu().tolist()
 
-            for img_path, pred in zip(img_paths, preds):
-                image_id = Path(str(img_path)).name
+            outputs = model(images)
+            preds = torch.argmax(outputs, dim=1).cpu().numpy().tolist()
+
+            for pred, path in zip(preds, img_paths):
+                image_id = os.path.basename(path)
                 id_to_pred[image_id] = int(pred)
 
     return id_to_pred
-
 
 
 def make_submission(id_to_pred: dict[str, int], template_csv_path: str | Path, output_path: str | Path) -> None:

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +25,12 @@ class TrainerState:
     best_metric: float = float("-inf")
     best_ckpt_path: str = ""
     early_stopping_counter: int = 0
+    history: dict[str, list[float]] = field(default_factory=lambda: {
+        "train_loss": [],
+        "val_loss": [],
+        "train_f1": [],
+        "val_f1": [],
+    })
 
 
 class BaseTrainer:
@@ -126,6 +132,12 @@ class BaseTrainer:
             train_metrics = self.train_one_epoch(train_loader)
             val_metrics = self.validate_one_epoch(val_loader)
 
+            # Record history for plotting
+            self.state.history["train_loss"].append(train_metrics["loss"])
+            self.state.history["val_loss"].append(val_metrics["loss"])
+            self.state.history["train_f1"].append(train_metrics["f1"])
+            self.state.history["val_f1"].append(val_metrics["f1"])
+
             if self.scheduler is not None:
                 self.scheduler.step()
 
@@ -186,6 +198,9 @@ class BaseTrainer:
         last_ckpt = self.output_dir / "last_model.pt"
         self.save_checkpoint(last_ckpt)
 
+        # Plot and save curves
+        self._plot_curves()
+
         if self.writer is not None:
             self.writer.close()
 
@@ -201,6 +216,7 @@ class BaseTrainer:
             "best_metric": self.state.best_metric,
             "best_ckpt_path": self.state.best_ckpt_path,
             "monitor": "f1",
+            "history": self.state.history,
         }
         torch.save(payload, ckpt_path)
 
@@ -219,3 +235,58 @@ class BaseTrainer:
         self.state.epoch = int(checkpoint.get("epoch", 0))
         self.state.best_metric = float(checkpoint.get("best_metric", float("-inf")))
         self.state.best_ckpt_path = str(checkpoint.get("best_ckpt_path", ""))
+        if "history" in checkpoint:
+            self.state.history = checkpoint["history"]
+
+    def _plot_curves(self) -> None:
+        """Plot and save training curves for loss and F1 score."""
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError:
+            self.logger.warning("matplotlib not installed, skipping curve plotting")
+            return
+
+        history = self.state.history
+        epochs = list(range(1, len(history["train_loss"]) + 1))
+
+        fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+
+        # Loss curve
+        ax1 = axes[0]
+        ax1.plot(epochs, history["train_loss"], "b-", label="Train Loss", linewidth=2)
+        ax1.plot(epochs, history["val_loss"], "r-", label="Val Loss", linewidth=2)
+        ax1.set_xlabel("Epoch")
+        ax1.set_ylabel("Loss")
+        ax1.set_title("Training & Validation Loss")
+        ax1.legend()
+        ax1.grid(True, alpha=0.3)
+
+        # F1 curve
+        ax2 = axes[1]
+        ax2.plot(epochs, history["train_f1"], "b-", label="Train F1", linewidth=2)
+        ax2.plot(epochs, history["val_f1"], "r-", label="Val F1", linewidth=2)
+        ax2.set_xlabel("Epoch")
+        ax2.set_ylabel("F1 Score")
+        ax2.set_title("Training & Validation F1 Score")
+        ax2.legend()
+        ax2.grid(True, alpha=0.3)
+
+        plt.tight_layout()
+
+        # Save figure
+        curve_path = self.output_dir / "training_curves.png"
+        plt.savefig(curve_path, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+
+        # Log final metrics
+        final_train_loss = history["train_loss"][-1]
+        final_val_loss = history["val_loss"][-1]
+        final_train_f1 = history["train_f1"][-1]
+        final_val_f1 = history["val_f1"][-1]
+
+        self.logger.info("Final Training Loss: %.4f", final_train_loss)
+        self.logger.info("Final Validation Loss: %.4f", final_val_loss)
+        self.logger.info("Final Training F1: %.4f", final_train_f1)
+        self.logger.info("Final Validation F1: %.4f", final_val_f1)
+        self.logger.info("Best Validation F1: %.4f", self.state.best_metric)
+        self.logger.info("Training curves saved to: %s", curve_path)
