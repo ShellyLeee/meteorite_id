@@ -19,9 +19,15 @@ def build_model(cfg: dict[str, Any]) -> BaseClassifier:
     model_name = str(model_cfg.get("name", "resnet18")).lower()
     pretrained = bool(model_cfg.get("pretrained", True))
     num_classes = int(cfg.get("num_classes", 2))
+    pretrained_cache_dir = model_cfg.get("pretrained_cache_dir")
 
     if model_name in {"resnet18", "resnet50"}:
-        return ResNetClassifier(model_name=model_name, num_classes=num_classes, pretrained=pretrained)
+        return ResNetClassifier(
+            model_name=model_name,
+            num_classes=num_classes,
+            pretrained=pretrained,
+            pretrained_cache_dir=pretrained_cache_dir,
+        )
 
     if model_name.startswith("vit"):
         raise NotImplementedError("ViT is not implemented in this baseline. Use resnet18 or resnet50.")
