@@ -16,7 +16,7 @@ def build_optimizer(model: nn.Module, cfg: dict[str, Any]) -> torch.optim.Optimi
     """
     name = str(cfg.get("name", "adamw")).lower()
     lr = float(cfg.get("lr", 3e-4))
-    weight_decay = float(cfg.get("weight_decay", 0.0))
+    weight_decay = float(cfg.get("weight_decay", 1e-4))
 
     if name == "adam":
         return torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)

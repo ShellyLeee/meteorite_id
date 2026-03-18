@@ -30,7 +30,7 @@ class TrainerState:
 class BaseTrainer:
     """Trainer with train/val loop, checkpointing, and early stopping.
 
-    The default monitored metric is validation F1.
+    Best checkpointing and early stopping are always based on validation F1.
     """
 
     def __init__(
@@ -119,7 +119,7 @@ class BaseTrainer:
 
     def fit(self, train_loader: DataLoader, val_loader: DataLoader, epochs: int) -> None:
         """Run full training loop with checkpointing and early stopping."""
-        self.logger.info("Training started: monitor=%s, epochs=%d", self.monitor, epochs)
+        self.logger.info("Training started: monitor=val_f1, epochs=%d", epochs)
 
         for epoch in range(1, epochs + 1):
             self.state.epoch = epoch
@@ -129,7 +129,7 @@ class BaseTrainer:
             if self.scheduler is not None:
                 self.scheduler.step()
 
-            monitor_value = float(val_metrics[self.monitor])
+            monitor_value = float(val_metrics["f1"])
             improved = monitor_value > self.state.best_metric
             if improved:
                 self.state.best_metric = monitor_value
@@ -142,27 +142,36 @@ class BaseTrainer:
 
             current_lr = float(self.optimizer.param_groups[0]["lr"])
             self.logger.info(
-                "Epoch %d/%d | lr=%.6f | train_loss=%.4f train_acc=%.4f train_f1=%.4f | "
-                "val_loss=%.4f val_acc=%.4f val_f1=%.4f | best_%s=%.4f",
+                "Epoch %d/%d | lr=%.6f | "
+                "train_loss=%.4f train_acc=%.4f train_prec=%.4f train_rec=%.4f train_f1=%.4f | "
+                "val_loss=%.4f val_acc=%.4f val_prec=%.4f val_rec=%.4f val_f1=%.4f | "
+                "best_val_f1=%.4f",
                 epoch,
                 epochs,
                 current_lr,
                 train_metrics["loss"],
                 train_metrics["accuracy"],
+                train_metrics["precision"],
+                train_metrics["recall"],
                 train_metrics["f1"],
                 val_metrics["loss"],
                 val_metrics["accuracy"],
+                val_metrics["precision"],
+                val_metrics["recall"],
                 val_metrics["f1"],
-                self.monitor,
                 self.state.best_metric,
             )
 
             if self.writer is not None:
                 self.writer.add_scalar("train/loss", train_metrics["loss"], epoch)
                 self.writer.add_scalar("train/accuracy", train_metrics["accuracy"], epoch)
+                self.writer.add_scalar("train/precision", train_metrics["precision"], epoch)
+                self.writer.add_scalar("train/recall", train_metrics["recall"], epoch)
                 self.writer.add_scalar("train/f1", train_metrics["f1"], epoch)
                 self.writer.add_scalar("val/loss", val_metrics["loss"], epoch)
                 self.writer.add_scalar("val/accuracy", val_metrics["accuracy"], epoch)
+                self.writer.add_scalar("val/precision", val_metrics["precision"], epoch)
+                self.writer.add_scalar("val/recall", val_metrics["recall"], epoch)
                 self.writer.add_scalar("val/f1", val_metrics["f1"], epoch)
                 self.writer.add_scalar("train/lr", current_lr, epoch)
 
@@ -191,7 +200,7 @@ class BaseTrainer:
             "epoch": self.state.epoch,
             "best_metric": self.state.best_metric,
             "best_ckpt_path": self.state.best_ckpt_path,
-            "monitor": self.monitor,
+            "monitor": "f1",
         }
         torch.save(payload, ckpt_path)
 

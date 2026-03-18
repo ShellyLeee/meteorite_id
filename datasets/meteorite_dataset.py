@@ -19,7 +19,7 @@ class MeteoriteDataset(BaseImageDataset):
     def __init__(
         self,
         mode: str,
-        csv_path: str | Path,
+        csv_path: str | Path | None,
         image_dir: str | Path,
         transform=None,
         val_ratio: float = 0.2,
@@ -27,7 +27,7 @@ class MeteoriteDataset(BaseImageDataset):
     ) -> None:
         super().__init__(transform=transform)
         self.mode = mode
-        self.csv_path = Path(csv_path)
+        self.csv_path = Path(csv_path) if csv_path is not None else None
         self.image_dir = Path(image_dir)
         self.val_ratio = val_ratio
         self.seed = seed
@@ -43,6 +43,8 @@ class MeteoriteDataset(BaseImageDataset):
             raise ValueError("mode must be one of {'train', 'val', 'test'}")
 
     def _build_train_val_samples(self) -> list[tuple[Path, int]]:
+        if self.csv_path is None:
+            raise ValueError("csv_path is required for train/val mode")
         if not self.csv_path.exists():
             raise FileNotFoundError(f"Training CSV not found: {self.csv_path}")
 
@@ -88,7 +90,7 @@ class MeteoriteDataset(BaseImageDataset):
         return samples
 
     def _build_test_samples(self) -> list[Path]:
-        image_files = sorted([p for p in self.image_dir.iterdir() if p.is_file()])
+        image_files = sorted([p for p in self.image_dir.iterdir() if p.is_file() and not p.name.startswith(".")])
         if not image_files:
             raise RuntimeError(f"No test images found in: {self.image_dir}")
         return image_files

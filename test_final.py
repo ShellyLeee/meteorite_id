@@ -23,7 +23,7 @@ except ModuleNotFoundError:  # pragma: no cover - local execution fallback
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description="Run inference and generate Kaggle submission")
-    parser.add_argument("--config", type=str, default="cfgs/resnet50_v1.yaml", help="Path to config yaml")
+    parser.add_argument("--config", type=str, default="cfgs/config.yaml", help="Path to config yaml")
     parser.add_argument("--checkpoint", type=str, required=True, help="Path to model checkpoint")
     parser.add_argument("--output_path", type=str, default="submission.csv", help="Output CSV path")
     return parser.parse_args()

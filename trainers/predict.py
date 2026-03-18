@@ -25,7 +25,7 @@ def predict(model: torch.nn.Module, loader: DataLoader, device: torch.device) ->
             preds = logits.argmax(dim=1).detach().cpu().tolist()
 
             for img_path, pred in zip(img_paths, preds):
-                image_id = Path(img_path).name
+                image_id = Path(str(img_path)).name
                 id_to_pred[image_id] = int(pred)
 
     return id_to_pred
@@ -44,7 +44,8 @@ def make_submission(id_to_pred: dict[str, int], template_csv_path: str | Path, o
     if "id" not in submission_df.columns:
         raise RuntimeError("sample_submission.csv must contain an 'id' column")
 
-    labels = submission_df["id"].map(id_to_pred)
+    id_to_pred_by_basename = {Path(str(k)).name: int(v) for k, v in id_to_pred.items()}
+    labels = submission_df["id"].astype(str).map(lambda x: id_to_pred_by_basename.get(Path(x).name))
     missing_mask = labels.isna()
     if missing_mask.any():
         missing_ids = submission_df.loc[missing_mask, "id"].astype(str).tolist()

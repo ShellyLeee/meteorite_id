@@ -26,7 +26,7 @@ except ModuleNotFoundError:  # pragma: no cover - local execution fallback
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description="Train meteorite classifier")
-    parser.add_argument("--config", type=str, default="cfgs/resnet50_v1.yaml", help="Path to config yaml")
+    parser.add_argument("--config", type=str, default="cfgs/config.yaml", help="Path to config yaml")
     return parser.parse_args()
 
 
@@ -68,7 +68,7 @@ def main() -> None:
         output_dir=output_dir,
         logger=logger,
         early_stopping_patience=int(train_cfg.get("early_stopping_patience", 5)),
-        monitor=str(train_cfg.get("monitor", "f1")),
+        monitor="f1",
         writer=writer,
     )
 

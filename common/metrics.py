@@ -19,19 +19,19 @@ def accuracy(y_true: list[int], y_pred: list[int]) -> float:
 
 def precision(y_true: list[int], y_pred: list[int]) -> float:
     """Compute binary precision with safe zero handling."""
-    return float(sk_precision_score(y_true, y_pred, zero_division=0))
+    return float(sk_precision_score(y_true, y_pred, average="binary", zero_division=0))
 
 
 
 def recall(y_true: list[int], y_pred: list[int]) -> float:
     """Compute binary recall with safe zero handling."""
-    return float(sk_recall_score(y_true, y_pred, zero_division=0))
+    return float(sk_recall_score(y_true, y_pred, average="binary", zero_division=0))
 
 
 
 def f1(y_true: list[int], y_pred: list[int]) -> float:
     """Compute binary F1 score with safe zero handling."""
-    return float(sk_f1_score(y_true, y_pred, zero_division=0))
+    return float(sk_f1_score(y_true, y_pred, average="binary", zero_division=0))
 
 
 

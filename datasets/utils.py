@@ -12,29 +12,30 @@ except ModuleNotFoundError:  # pragma: no cover - local execution fallback
 
 
 def _resolve_image_dir(path: Path) -> Path:
-    """Resolve image directory, allowing one extra nested folder layer.
-
-    Examples:
-        train_images/
-        train_images/train_images/
-    """
+    """Resolve image directory, handling common nested-folder packaging."""
     if not path.exists():
         raise FileNotFoundError(f"Image directory not found: {path}")
 
     if not path.is_dir():
         raise NotADirectoryError(f"Expected a directory, got: {path}")
 
-    files = [p for p in path.iterdir() if p.is_file() and not p.name.startswith(".")]
-    if files:
-        return path
+    image_suffixes = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"}
+    current = path
 
-    subdirs = [p for p in path.iterdir() if p.is_dir() and not p.name.startswith(".")]
-    if len(subdirs) == 1:
-        nested = subdirs[0]
-        nested_files = [p for p in nested.iterdir() if p.is_file() and not p.name.startswith(".")]
-        if nested_files:
-            print(f"[Data] Detected nested image directory, using: {nested}")
-            return nested
+    for _ in range(3):
+        has_images = any(
+            p.is_file() and not p.name.startswith(".") and p.suffix.lower() in image_suffixes
+            for p in current.iterdir()
+        )
+        if has_images:
+            if current != path:
+                print(f"[Data] Detected nested image directory, using: {current}")
+            return current
+
+        subdirs = [p for p in current.iterdir() if p.is_dir() and not p.name.startswith(".")]
+        if len(subdirs) != 1:
+            break
+        current = subdirs[0]
 
     return path
 
@@ -87,7 +88,7 @@ def build_datasets(cfg: dict[str, Any], include_test: bool = True) -> dict[str, 
     if include_test:
         datasets["test"] = MeteoriteDataset(
             mode="test",
-            csv_path=paths["train_csv"],  # keep for now if your dataset class requires it
+            csv_path=None,
             image_dir=paths["test_image_dir"],
             transform=build_transforms(mode="test", cfg=cfg),
             val_ratio=val_ratio,
@@ -103,7 +104,7 @@ def build_dataloaders(cfg: dict[str, Any], include_test: bool = True):
 
     batch_size = int(cfg.get("batch_size", 32))
     num_workers = int(cfg.get("num_workers", 4))
-    pin_memory = True
+    pin_memory = bool(cfg.get("pin_memory", True))
 
     train_loader = DataLoader(
         datasets["train"],

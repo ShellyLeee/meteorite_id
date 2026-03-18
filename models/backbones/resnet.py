@@ -15,7 +15,7 @@ except ModuleNotFoundError:  # pragma: no cover - local execution fallback
 class ResNetClassifier(BaseClassifier):
     """ResNet-based classifier supporting resnet18 and resnet50."""
 
-    def __init__(self, model_name: str = "resnet50", num_classes: int = 2, pretrained: bool = True) -> None:
+    def __init__(self, model_name: str = "resnet18", num_classes: int = 2, pretrained: bool = True) -> None:
         super().__init__(num_classes=num_classes)
         self.model_name = model_name.lower()
 

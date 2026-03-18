@@ -41,8 +41,9 @@ class LabelSmoothingCrossEntropy(BaseLoss):
 
 
 
-def build_loss(cfg: dict[str, Any]) -> BaseLoss:
+def build_loss(cfg: dict[str, Any] | None) -> BaseLoss:
     """Build loss from config dictionary."""
+    cfg = cfg or {}
     name = str(cfg.get("name", "cross_entropy")).lower()
 
     if name in {"cross_entropy", "ce"}:

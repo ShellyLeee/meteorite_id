@@ -1,10 +1,10 @@
 seed: 42
 device: auto
-output_dir: ./outputs/resnet18
+output_dir: ./outputs/resnet18_baseline
 
 data_root: /mnt/sharedata/ssd_large/users/liyx/kaggle/meteorite-identification
-train_csv: training_labels.csv
-train_image_dir: training_images
+train_csv: train_labels.csv
+train_image_dir: train_images
 test_image_dir: test_images
 sample_submission_path: sample_submission.csv
 
@@ -12,6 +12,7 @@ num_classes: 2
 image_size: 224
 batch_size: 32
 num_workers: 4
+pin_memory: true
 val_ratio: 0.2
 
 model:
@@ -28,16 +29,20 @@ optimizer:
   weight_decay: 0.0001
 
 scheduler:
-  name: cosine
-  t_max: 15
-  eta_min: 0.0
+  name: none
 
 train:
-  epochs: 15
+  epochs: 25
   early_stopping_patience: 5
   monitor: f1
 
 aug:
+  train_rrc_scale_min: 0.7
+  train_rrc_scale_max: 1.0
   train_flip_p: 0.5
-  train_rotation: 10
-  train_color_jitter: 0.2
+  train_rotation: 15
+  train_jitter_brightness: 0.1
+  train_jitter_contrast: 0.1
+  train_jitter_saturation: 0.1
+  train_jitter_hue: 0.02
+  eval_resize_size: 256
