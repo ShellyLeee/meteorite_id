@@ -1,8 +1,8 @@
 seed: 42
 device: auto
-output_dir: ./outputs/resnet18_baseline
+output_dir: ./outputs/resnet18
 
-data_root: /mnt/sharedata/ssd_large/users/liyx/kaggle
+data_root: /mnt/sharedata/ssd_large/users/liyx/kaggle/meteorite-identification
 train_csv: training_labels.csv
 train_image_dir: training_images
 test_image_dir: test_images
@@ -15,7 +15,7 @@ num_workers: 4
 val_ratio: 0.2
 
 model:
-  name: resnet18
+  name: resnet18  # option: resnet18, resnet34, resnet50, efficientnet_b0, efficientnet_b1
   pretrained: true
 
 loss:
