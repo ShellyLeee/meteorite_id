@@ -1,7 +1,3 @@
-"""Dataset and DataLoader builders."""
-
-from __future__ import annotations
-
 from pathlib import Path
 from typing import Any
 
@@ -15,13 +11,41 @@ except ModuleNotFoundError:  # pragma: no cover - local execution fallback
     from datasets.transforms import build_transforms
 
 
+def _resolve_image_dir(path: Path) -> Path:
+    """Resolve image directory, allowing one extra nested folder layer.
+
+    Examples:
+        train_images/
+        train_images/train_images/
+    """
+    if not path.exists():
+        raise FileNotFoundError(f"Image directory not found: {path}")
+
+    if not path.is_dir():
+        raise NotADirectoryError(f"Expected a directory, got: {path}")
+
+    files = [p for p in path.iterdir() if p.is_file() and not p.name.startswith(".")]
+    if files:
+        return path
+
+    subdirs = [p for p in path.iterdir() if p.is_dir() and not p.name.startswith(".")]
+    if len(subdirs) == 1:
+        nested = subdirs[0]
+        nested_files = [p for p in nested.iterdir() if p.is_file() and not p.name.startswith(".")]
+        if nested_files:
+            print(f"[Data] Detected nested image directory, using: {nested}")
+            return nested
+
+    return path
+
 
 def _resolve_data_paths(cfg: dict[str, Any]) -> dict[str, Path]:
     data_root = Path(cfg["data_root"])
     train_csv = data_root / cfg["train_csv"]
-    train_image_dir = data_root / cfg["train_image_dir"]
-    test_image_dir = data_root / cfg["test_image_dir"]
+    train_image_dir = _resolve_image_dir(data_root / cfg["train_image_dir"])
+    test_image_dir = _resolve_image_dir(data_root / cfg["test_image_dir"])
     sample_submission_path = data_root / cfg["sample_submission_path"]
+
     return {
         "data_root": data_root,
         "train_csv": train_csv,
@@ -31,14 +55,8 @@ def _resolve_data_paths(cfg: dict[str, Any]) -> dict[str, Path]:
     }
 
 
-
 def build_datasets(cfg: dict[str, Any], include_test: bool = True) -> dict[str, MeteoriteDataset]:
-    """Build dataset instances.
-
-    Args:
-        cfg: Top-level config dictionary.
-        include_test: Whether to build test dataset.
-    """
+    """Build dataset instances."""
     paths = _resolve_data_paths(cfg)
 
     train_transform = build_transforms(mode="train", cfg=cfg)
@@ -69,7 +87,7 @@ def build_datasets(cfg: dict[str, Any], include_test: bool = True) -> dict[str, 
     if include_test:
         datasets["test"] = MeteoriteDataset(
             mode="test",
-            csv_path=paths["train_csv"],
+            csv_path=paths["train_csv"],  # keep for now if your dataset class requires it
             image_dir=paths["test_image_dir"],
             transform=build_transforms(mode="test", cfg=cfg),
             val_ratio=val_ratio,
