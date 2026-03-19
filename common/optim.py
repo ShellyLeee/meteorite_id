@@ -42,8 +42,8 @@ def build_scheduler(optimizer: torch.optim.Optimizer, cfg: dict[str, Any]):
 
     if name == "cosine":
         t_max = int(cfg.get("t_max", 10))
-        eta_min = float(cfg.get("eta_min", 0.0))
-        return torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=t_max, eta_min=eta_min)
+        lr_min = float(cfg.get("lr_min", 0.0))
+        return torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=t_max, eta_min=lr_min)
 
     if name == "step":
         step_size = int(cfg.get("step_size", 5))
