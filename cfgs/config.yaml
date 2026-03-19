@@ -16,7 +16,7 @@ pin_memory: true
 val_ratio: 0.2
 
 model:
-  name: resnet18  # option: resnet18, resnet50, efficientnet_b0, efficientnet_b1
+  name: resnet50  # option: resnet18, resnet50, efficientnet_b0, efficientnet_b1
   pretrained: false
   pretrained_path: /mnt/sharedata/ssd_large/users/liyx/resnet50-0676ba61.pth
 
