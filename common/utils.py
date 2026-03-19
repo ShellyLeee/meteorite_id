@@ -70,3 +70,21 @@ def get_device(device_str: str = "auto") -> torch.device:
     if device_str == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("Requested CUDA device but CUDA is not available")
     return torch.device(device_str)
+
+
+
+def save_config(cfg: dict[str, Any], output_dir: Path) -> None:
+    """Save config to output directory for experiment tracking."""
+    from datetime import datetime
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    config_backup_dir = output_dir / "configs"
+    config_backup_dir.mkdir(parents=True, exist_ok=True)
+
+    config_name = f"config_{timestamp}.yaml"
+    config_path = config_backup_dir / config_name
+
+    with config_path.open("w", encoding="utf-8") as f:
+        yaml.dump(cfg, f, default_flow_style=False, sort_keys=False)
+
+    return config_path

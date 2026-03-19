@@ -59,15 +59,23 @@ Best checkpoint is saved to:
 ## Inference and Submission
 
 ```bash
-# Default checkpoint path
-python test.py --checkpoint outputs/resnet18_baseline/best_model.pt
+# By experiment name (auto-resolves config, checkpoint, and output path)
+python test.py --exp resnet50/baseline
 
-# Specify config, checkpoint, and output path
+# By experiment path
+python test.py --exp ./outputs/resnet50/baseline
+
+# Legacy mode: specify config, checkpoint, and output path manually
 python test.py \
   --config cfgs/config.yaml \
-  --checkpoint outputs/resnet18_baseline/best_model.pt \
-  --output_path outputs/resnet18_baseline/submission.csv
+  --checkpoint outputs/resnet50/baseline/best_model.pt \
+  --output_path outputs/resnet50/baseline/submission.csv
 ```
+
+When using `--exp`, the following are auto-resolved from the experiment directory:
+- **Config**: latest `configs/config_*.yaml`
+- **Checkpoint**: `best_model.pt`
+- **Output**: `submission.csv` (in the experiment directory)
 
 Workflow:
 

@@ -8,7 +8,7 @@ try:
     from meteorite_id.common.logging import build_logger, build_tensorboard_writer
     from meteorite_id.common.loss import build_loss
     from meteorite_id.common.optim import build_optimizer, build_scheduler
-    from meteorite_id.common.utils import ensure_dir, get_device, load_yaml, set_seed
+    from meteorite_id.common.utils import ensure_dir, get_device, load_yaml, save_config, set_seed
     from meteorite_id.datasets.utils import build_dataloaders
     from meteorite_id.models.utils import build_model
     from meteorite_id.trainers.base_trainer import BaseTrainer
@@ -16,7 +16,7 @@ except ModuleNotFoundError:  # pragma: no cover - local execution fallback
     from common.logging import build_logger, build_tensorboard_writer
     from common.loss import build_loss
     from common.optim import build_optimizer, build_scheduler
-    from common.utils import ensure_dir, get_device, load_yaml, set_seed
+    from common.utils import ensure_dir, get_device, load_yaml, save_config, set_seed
     from datasets.utils import build_dataloaders
     from models.utils import build_model
     from trainers.base_trainer import BaseTrainer
@@ -37,7 +37,10 @@ def main() -> None:
     cfg = load_yaml(args.config)
 
     output_dir = ensure_dir(cfg.get("output_dir", "./outputs/default"))
+    config_path = save_config(cfg, output_dir)
+
     logger = build_logger(name="train", log_dir=output_dir)
+    logger.info("Config saved to: %s", config_path)
     writer = build_tensorboard_writer(output_dir / "tb")
 
     seed = int(cfg.get("seed", 42))
