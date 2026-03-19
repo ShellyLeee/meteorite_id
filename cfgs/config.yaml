@@ -16,9 +16,9 @@ pin_memory: true
 val_ratio: 0.2
 
 model:
-  name: resnet18  # option: resnet18, resnet34, resnet50, efficientnet_b0, efficientnet_b1
-  pretrained: true
-  pretrained_cache_dir: /mnt/sharedata/ssd_large/users/liyx/kaggle/meteorite-identification/weights
+  name: resnet18  # option: resnet18, resnet50, efficientnet_b0, efficientnet_b1
+  pretrained: false
+  pretrained_path: /mnt/sharedata/ssd_large/users/liyx/resnet50-0676ba61.pth
 
 loss:
   name: cross_entropy
