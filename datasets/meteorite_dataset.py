@@ -14,7 +14,7 @@ except ModuleNotFoundError:  # pragma: no cover - local execution fallback
 
 
 class MeteoriteDataset(BaseImageDataset):
-    """Dataset supporting train/val split and test inference."""
+    """Dataset supporting train/val split, full-train mode, and test inference."""
 
     def __init__(
         self,
@@ -37,10 +37,12 @@ class MeteoriteDataset(BaseImageDataset):
 
         if self.mode in {"train", "val"}:
             self.samples = self._build_train_val_samples()
+        elif self.mode == "full_train":
+            self.samples = self._build_full_train_samples()
         elif self.mode == "test":
             self.samples = self._build_test_samples()
         else:
-            raise ValueError("mode must be one of {'train', 'val', 'test'}")
+            raise ValueError("mode must be one of {'train', 'val', 'full_train', 'test'}")
 
     def _build_train_val_samples(self) -> list[tuple[Path, int]]:
         if self.csv_path is None:
@@ -89,6 +91,43 @@ class MeteoriteDataset(BaseImageDataset):
 
         return samples
 
+    def _build_full_train_samples(self) -> list[tuple[Path, int]]:
+        if self.csv_path is None:
+            raise ValueError("csv_path is required for full_train mode")
+        if not self.csv_path.exists():
+            raise FileNotFoundError(f"Training CSV not found: {self.csv_path}")
+
+        df = pd.read_csv(self.csv_path)
+        required_cols = {"id", "label"}
+        missing_cols = required_cols - set(df.columns)
+        if missing_cols:
+            raise ValueError(f"Missing required columns in CSV: {sorted(missing_cols)}")
+
+        df["id"] = df["id"].astype(str)
+        df["label"] = df["label"].astype(int)
+
+        samples: list[tuple[Path, int]] = []
+        missing_files: list[str] = []
+
+        for _, row in df.iterrows():
+            img_path = self.image_dir / row["id"]
+            if not img_path.exists():
+                missing_files.append(row["id"])
+                continue
+            samples.append((img_path, int(row["label"])))
+
+        if missing_files:
+            preview = ", ".join(missing_files[:5])
+            raise FileNotFoundError(
+                f"{len(missing_files)} images listed in CSV were not found in {self.image_dir}. "
+                f"Examples: {preview}"
+            )
+
+        if not samples:
+            raise RuntimeError("No usable samples found for mode='full_train'")
+
+        return samples
+
     def _build_test_samples(self) -> list[Path]:
         image_files = sorted([p for p in self.image_dir.iterdir() if p.is_file() and not p.name.startswith(".")])
         if not image_files:
@@ -99,7 +138,7 @@ class MeteoriteDataset(BaseImageDataset):
         return len(self.samples)
 
     def __getitem__(self, index: int):
-        if self.mode in {"train", "val"}:
+        if self.mode in {"train", "val", "full_train"}:
             img_path, label = self.samples[index]
             image = self.load_rgb_image(img_path)
             if self.transform is not None:

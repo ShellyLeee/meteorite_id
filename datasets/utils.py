@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any
 
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 
 try:
     from meteorite_id.datasets.meteorite_dataset import MeteoriteDataset
@@ -131,3 +131,64 @@ def build_dataloaders(cfg: dict[str, Any], include_test: bool = True):
         )
 
     return train_loader, val_loader, test_loader
+
+
+def build_cv_datasets(cfg: dict[str, Any]) -> tuple[MeteoriteDataset, MeteoriteDataset, list[int]]:
+    """Build full labeled datasets for CV with train/eval transforms."""
+    paths = _resolve_data_paths(cfg)
+
+    train_transform = build_transforms(mode="train", cfg=cfg)
+    eval_transform = build_transforms(mode="val", cfg=cfg)
+    seed = int(cfg.get("seed", 42))
+
+    train_dataset_full = MeteoriteDataset(
+        mode="full_train",
+        csv_path=paths["train_csv"],
+        image_dir=paths["train_image_dir"],
+        transform=train_transform,
+        val_ratio=float(cfg.get("val_ratio", 0.2)),
+        seed=seed,
+    )
+    val_dataset_full = MeteoriteDataset(
+        mode="full_train",
+        csv_path=paths["train_csv"],
+        image_dir=paths["train_image_dir"],
+        transform=eval_transform,
+        val_ratio=float(cfg.get("val_ratio", 0.2)),
+        seed=seed,
+    )
+
+    labels = [int(label) for _, label in train_dataset_full.samples]
+    return train_dataset_full, val_dataset_full, labels
+
+
+def build_fold_dataloaders(
+    cfg: dict[str, Any],
+    train_dataset_full: MeteoriteDataset,
+    val_dataset_full: MeteoriteDataset,
+    train_indices: list[int],
+    val_indices: list[int],
+) -> tuple[DataLoader, DataLoader]:
+    """Build fold dataloaders from pre-built full datasets and index splits."""
+    batch_size = int(cfg.get("batch_size", 32))
+    num_workers = int(cfg.get("num_workers", 4))
+    pin_memory = bool(cfg.get("pin_memory", True))
+
+    train_dataset_fold = Subset(train_dataset_full, train_indices)
+    val_dataset_fold = Subset(val_dataset_full, val_indices)
+
+    train_loader = DataLoader(
+        train_dataset_fold,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+    )
+    val_loader = DataLoader(
+        val_dataset_fold,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+    )
+    return train_loader, val_loader
