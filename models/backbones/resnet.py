@@ -23,6 +23,7 @@ class ResNetClassifier(BaseClassifier):
         num_classes: int = 2,
         pretrained: bool = False,
         pretrained_path: str | None = None,
+        dropout: float = 0.0,
     ) -> None:
         super().__init__(num_classes=num_classes)
         self.model_name = model_name.lower()
@@ -65,7 +66,13 @@ class ResNetClassifier(BaseClassifier):
 
         # Step 4: replace classifier head
         in_features = self.backbone.fc.in_features
-        self.backbone.fc = nn.Linear(in_features, num_classes)
+        if dropout > 0:
+            self.backbone.fc = nn.Sequential(
+                nn.Dropout(p=float(dropout)),
+                nn.Linear(in_features, num_classes),
+            )
+        else:
+            self.backbone.fc = nn.Linear(in_features, num_classes)
 
     def feature_extract(self, x: torch.Tensor) -> torch.Tensor:
         """Extract pooled feature vectors before final FC."""

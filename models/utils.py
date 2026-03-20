@@ -20,6 +20,7 @@ def build_model(cfg: dict[str, Any]) -> BaseClassifier:
     pretrained = bool(model_cfg.get("pretrained", True))
     num_classes = int(cfg.get("num_classes", 2))
     pretrained_path = model_cfg.get("pretrained_path")
+    dropout = float(model_cfg.get("dropout", 0.0))
 
     if model_name in {"resnet18", "resnet50"}:
         return ResNetClassifier(
@@ -27,6 +28,7 @@ def build_model(cfg: dict[str, Any]) -> BaseClassifier:
             num_classes=num_classes,
             pretrained=pretrained,
             pretrained_path=pretrained_path,
+            dropout=dropout,
         )
 
     if model_name.startswith("vit"):

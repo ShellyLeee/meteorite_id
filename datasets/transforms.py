@@ -17,14 +17,19 @@ def build_transforms(mode: str, cfg: dict[str, Any]):
     aug_cfg = cfg.get("aug", {})
 
     if mode == "train":
-        scale_min = float(aug_cfg.get("train_rrc_scale_min", 0.7))
+        scale_min = float(aug_cfg.get("train_rrc_scale_min", 0.5))
         scale_max = float(aug_cfg.get("train_rrc_scale_max", 1.0))
         flip_p = float(aug_cfg.get("train_flip_p", 0.5))
-        rotation = float(aug_cfg.get("train_rotation", 15))
-        brightness = float(aug_cfg.get("train_jitter_brightness", 0.1))
-        contrast = float(aug_cfg.get("train_jitter_contrast", 0.1))
-        saturation = float(aug_cfg.get("train_jitter_saturation", 0.1))
-        hue = float(aug_cfg.get("train_jitter_hue", 0.02))
+        rotation = float(aug_cfg.get("train_rotation", 20))
+        brightness = float(aug_cfg.get("train_jitter_brightness", 0.25))
+        contrast = float(aug_cfg.get("train_jitter_contrast", 0.25))
+        saturation = float(aug_cfg.get("train_jitter_saturation", 0.25))
+        hue = float(aug_cfg.get("train_jitter_hue", 0.04))
+        erasing_p = float(aug_cfg.get("train_erasing_p", 0.3))
+        erasing_scale_min = float(aug_cfg.get("train_erasing_scale_min", 0.02))
+        erasing_scale_max = float(aug_cfg.get("train_erasing_scale_max", 0.2))
+        erasing_ratio_min = float(aug_cfg.get("train_erasing_ratio_min", 0.3))
+        erasing_ratio_max = float(aug_cfg.get("train_erasing_ratio_max", 3.3))
 
         return transforms.Compose(
             [
@@ -38,6 +43,12 @@ def build_transforms(mode: str, cfg: dict[str, Any]):
                     hue=hue,
                 ),
                 transforms.ToTensor(),
+                transforms.RandomErasing(
+                    p=erasing_p,
+                    scale=(erasing_scale_min, erasing_scale_max),
+                    ratio=(erasing_ratio_min, erasing_ratio_max),
+                    value="random",
+                ),
                 transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
             ]
         )

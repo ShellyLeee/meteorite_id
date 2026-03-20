@@ -19,15 +19,16 @@ model:
   name: resnet50  # option: resnet18, resnet50, efficientnet_b0, efficientnet_b1
   pretrained: false
   pretrained_path: /mnt/sharedata/ssd_large/users/liyx/resnet50-0676ba61.pth
+  dropout: 0.2
 
 loss:
   name: cross_entropy
-  label_smoothing: 0.05
+  label_smoothing: 0.1
 
 optimizer:
   name: adamw
   lr: 0.0002
-  weight_decay: 0.0003
+  weight_decay: 0.0005
 
 scheduler:
   name: cosine
@@ -37,15 +38,20 @@ scheduler:
 train:
   epochs: 30
   early_stopping_patience: 10
-  monitor: f1
+  monitor: f1_tuned  # option: f1, f1_tuned
 
 aug:
-  train_rrc_scale_min: 0.55
+  train_rrc_scale_min: 0.5
   train_rrc_scale_max: 1.0
   train_flip_p: 0.5
   train_rotation: 20
-  train_jitter_brightness: 0.2
-  train_jitter_contrast: 0.2
-  train_jitter_saturation: 0.2
-  train_jitter_hue: 0.03
+  train_jitter_brightness: 0.25
+  train_jitter_contrast: 0.25
+  train_jitter_saturation: 0.25
+  train_jitter_hue: 0.04
+  train_erasing_p: 0.3
+  train_erasing_scale_min: 0.02
+  train_erasing_scale_max: 0.2
+  train_erasing_ratio_min: 0.3
+  train_erasing_ratio_max: 3.3
   eval_resize_size: 256

@@ -71,7 +71,7 @@ def main() -> None:
         output_dir=output_dir,
         logger=logger,
         early_stopping_patience=int(train_cfg.get("early_stopping_patience", 5)),
-        monitor="f1",
+        monitor=str(train_cfg.get("monitor", "f1_tuned")),
         writer=writer,
     )
 

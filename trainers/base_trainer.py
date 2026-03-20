@@ -8,13 +8,14 @@ from pathlib import Path
 from typing import Any
 
 import torch
+import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 try:
-    from meteorite_id.common.metrics import compute_classification_metrics
+    from meteorite_id.common.metrics import compute_classification_metrics, tune_threshold
 except ModuleNotFoundError:  # pragma: no cover - local execution fallback
-    from common.metrics import compute_classification_metrics
+    from common.metrics import compute_classification_metrics, tune_threshold
 
 
 @dataclass
@@ -23,6 +24,7 @@ class TrainerState:
 
     epoch: int = 0
     best_metric: float = float("-inf")
+    best_threshold: float = 0.5
     best_ckpt_path: str = ""
     early_stopping_counter: int = 0
     history: dict[str, list[float]] = field(default_factory=lambda: {
@@ -30,13 +32,15 @@ class TrainerState:
         "val_loss": [],
         "train_f1": [],
         "val_f1": [],
+        "val_f1_tuned": [],
+        "val_best_threshold": [],
     })
 
 
 class BaseTrainer:
     """Trainer with train/val loop, checkpointing, and early stopping.
 
-    Best checkpointing and early stopping are always based on validation F1.
+    Best checkpointing and early stopping are based on threshold-tuned validation F1.
     """
 
     def __init__(
@@ -49,7 +53,7 @@ class BaseTrainer:
         output_dir: str | Path,
         logger: logging.Logger,
         early_stopping_patience: int = 5,
-        monitor: str = "f1",
+        monitor: str = "f1_tuned",
         writer: Any = None,
     ) -> None:
         self.model = model
@@ -102,6 +106,7 @@ class BaseTrainer:
         running_loss = 0.0
         y_true: list[int] = []
         y_pred: list[int] = []
+        y_prob: list[float] = []
 
         with torch.no_grad():
             progress = tqdm(val_loader, desc="Val", leave=False)
@@ -114,18 +119,23 @@ class BaseTrainer:
 
                 running_loss += loss.item() * images.size(0)
                 preds = logits.argmax(dim=1)
+                probs = F.softmax(logits, dim=1)[:, 1]
 
                 y_true.extend(labels.detach().cpu().tolist())
                 y_pred.extend(preds.detach().cpu().tolist())
+                y_prob.extend(probs.detach().cpu().tolist())
 
         epoch_loss = running_loss / len(val_loader.dataset)
         metrics = compute_classification_metrics(y_true=y_true, y_pred=y_pred)
+        best_threshold, best_f1 = tune_threshold(y_true=y_true, y_prob=y_prob)
         metrics["loss"] = float(epoch_loss)
+        metrics["f1_tuned"] = float(best_f1)
+        metrics["best_threshold"] = float(best_threshold)
         return metrics
 
     def fit(self, train_loader: DataLoader, val_loader: DataLoader, epochs: int) -> None:
         """Run full training loop with checkpointing and early stopping."""
-        self.logger.info("Training started: monitor=val_f1, epochs=%d", epochs)
+        self.logger.info("Training started: monitor=val_%s, epochs=%d", self.monitor, epochs)
 
         for epoch in range(1, epochs + 1):
             self.state.epoch = epoch
@@ -137,14 +147,18 @@ class BaseTrainer:
             self.state.history["val_loss"].append(val_metrics["loss"])
             self.state.history["train_f1"].append(train_metrics["f1"])
             self.state.history["val_f1"].append(val_metrics["f1"])
+            self.state.history["val_f1_tuned"].append(val_metrics["f1_tuned"])
+            self.state.history["val_best_threshold"].append(val_metrics["best_threshold"])
 
             if self.scheduler is not None:
                 self.scheduler.step()
 
-            monitor_value = float(val_metrics["f1"])
+            monitor_key = "f1_tuned" if self.monitor == "f1_tuned" else "f1"
+            monitor_value = float(val_metrics[monitor_key])
             improved = monitor_value > self.state.best_metric
             if improved:
                 self.state.best_metric = monitor_value
+                self.state.best_threshold = float(val_metrics["best_threshold"])
                 self.state.early_stopping_counter = 0
                 best_ckpt_path = self.output_dir / "best_model.pt"
                 self.save_checkpoint(best_ckpt_path)
@@ -156,8 +170,9 @@ class BaseTrainer:
             self.logger.info(
                 "Epoch %d/%d | lr=%.6f | "
                 "train_loss=%.4f train_acc=%.4f train_prec=%.4f train_rec=%.4f train_f1=%.4f | "
-                "val_loss=%.4f val_acc=%.4f val_prec=%.4f val_rec=%.4f val_f1=%.4f | "
-                "best_val_f1=%.4f",
+                "val_loss=%.4f val_acc=%.4f val_prec=%.4f val_rec=%.4f val_f1(argmax)=%.4f "
+                "val_f1(tuned)=%.4f val_thr=%.2f | "
+                "best_val_f1(tuned)=%.4f best_thr=%.2f",
                 epoch,
                 epochs,
                 current_lr,
@@ -171,7 +186,10 @@ class BaseTrainer:
                 val_metrics["precision"],
                 val_metrics["recall"],
                 val_metrics["f1"],
+                val_metrics["f1_tuned"],
+                val_metrics["best_threshold"],
                 self.state.best_metric,
+                self.state.best_threshold,
             )
 
             if self.writer is not None:
@@ -184,7 +202,9 @@ class BaseTrainer:
                 self.writer.add_scalar("val/accuracy", val_metrics["accuracy"], epoch)
                 self.writer.add_scalar("val/precision", val_metrics["precision"], epoch)
                 self.writer.add_scalar("val/recall", val_metrics["recall"], epoch)
-                self.writer.add_scalar("val/f1", val_metrics["f1"], epoch)
+                self.writer.add_scalar("val/f1_argmax", val_metrics["f1"], epoch)
+                self.writer.add_scalar("val/f1_tuned", val_metrics["f1_tuned"], epoch)
+                self.writer.add_scalar("val/best_threshold", val_metrics["best_threshold"], epoch)
                 self.writer.add_scalar("train/lr", current_lr, epoch)
 
             if self.state.early_stopping_counter >= self.early_stopping_patience:
@@ -214,8 +234,9 @@ class BaseTrainer:
             "optimizer_state_dict": self.optimizer.state_dict(),
             "epoch": self.state.epoch,
             "best_metric": self.state.best_metric,
+            "best_threshold": self.state.best_threshold,
             "best_ckpt_path": self.state.best_ckpt_path,
-            "monitor": "f1",
+            "monitor": self.monitor,
             "history": self.state.history,
         }
         torch.save(payload, ckpt_path)
@@ -234,9 +255,17 @@ class BaseTrainer:
 
         self.state.epoch = int(checkpoint.get("epoch", 0))
         self.state.best_metric = float(checkpoint.get("best_metric", float("-inf")))
+        self.state.best_threshold = float(checkpoint.get("best_threshold", 0.5))
         self.state.best_ckpt_path = str(checkpoint.get("best_ckpt_path", ""))
+        self.monitor = str(checkpoint.get("monitor", self.monitor))
         if "history" in checkpoint:
-            self.state.history = checkpoint["history"]
+            loaded_history = checkpoint["history"]
+            self.state.history["train_loss"] = loaded_history.get("train_loss", [])
+            self.state.history["val_loss"] = loaded_history.get("val_loss", [])
+            self.state.history["train_f1"] = loaded_history.get("train_f1", [])
+            self.state.history["val_f1"] = loaded_history.get("val_f1", [])
+            self.state.history["val_f1_tuned"] = loaded_history.get("val_f1_tuned", [])
+            self.state.history["val_best_threshold"] = loaded_history.get("val_best_threshold", [])
 
     def _plot_curves(self) -> None:
         """Plot and save training curves for loss and F1 score."""
@@ -264,7 +293,9 @@ class BaseTrainer:
         # F1 curve
         ax2 = axes[1]
         ax2.plot(epochs, history["train_f1"], "b-", label="Train F1", linewidth=2)
-        ax2.plot(epochs, history["val_f1"], "r-", label="Val F1", linewidth=2)
+        ax2.plot(epochs, history["val_f1"], "r-", label="Val F1 (argmax)", linewidth=2)
+        if history["val_f1_tuned"]:
+            ax2.plot(epochs, history["val_f1_tuned"], "g-", label="Val F1 (tuned)", linewidth=2)
         ax2.set_xlabel("Epoch")
         ax2.set_ylabel("F1 Score")
         ax2.set_title("Training & Validation F1 Score")
@@ -283,10 +314,13 @@ class BaseTrainer:
         final_val_loss = history["val_loss"][-1]
         final_train_f1 = history["train_f1"][-1]
         final_val_f1 = history["val_f1"][-1]
+        final_val_f1_tuned = history["val_f1_tuned"][-1] if history["val_f1_tuned"] else final_val_f1
 
         self.logger.info("Final Training Loss: %.4f", final_train_loss)
         self.logger.info("Final Validation Loss: %.4f", final_val_loss)
         self.logger.info("Final Training F1: %.4f", final_train_f1)
-        self.logger.info("Final Validation F1: %.4f", final_val_f1)
-        self.logger.info("Best Validation F1: %.4f", self.state.best_metric)
+        self.logger.info("Final Validation F1 (argmax): %.4f", final_val_f1)
+        self.logger.info("Final Validation F1 (tuned): %.4f", final_val_f1_tuned)
+        self.logger.info("Best Validation F1 (tuned): %.4f", self.state.best_metric)
+        self.logger.info("Best Threshold: %.2f", self.state.best_threshold)
         self.logger.info("Training curves saved to: %s", curve_path)

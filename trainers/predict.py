@@ -1,17 +1,17 @@
 """Inference and submission helpers."""
 
 from __future__ import annotations
-from tqdm import tqdm
 from pathlib import Path
+import os
 
 import pandas as pd
 import torch
-import os
+from tqdm import tqdm
 from torch.utils.data import DataLoader
 
 
 
-def predict(model, loader, device):
+def predict(model, loader, device, threshold: float | None = None):
     model.eval()
     id_to_pred = {}
 
@@ -20,7 +20,11 @@ def predict(model, loader, device):
             images = images.to(device, non_blocking=True)
 
             outputs = model(images)
-            preds = torch.argmax(outputs, dim=1).cpu().numpy().tolist()
+            if threshold is not None and outputs.shape[1] == 2:
+                probs = torch.softmax(outputs, dim=1)[:, 1]
+                preds = (probs >= threshold).long().cpu().numpy().tolist()
+            else:
+                preds = torch.argmax(outputs, dim=1).cpu().numpy().tolist()
 
             for pred, path in zip(preds, img_paths):
                 image_id = os.path.basename(path)
