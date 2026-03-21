@@ -1,6 +1,6 @@
 seed: 42
 device: cuda:1
-output_dir: ./outputs/resnet18/baseline_v2
+output_dir: ./outputs/resnet18/baseline_v2_cv
 
 data_root: /mnt/sharedata/ssd_large/users/liyx/kaggle/meteorite-identification
 train_csv: train_labels.csv
@@ -13,12 +13,12 @@ image_size: 224
 batch_size: 32
 num_workers: 4
 pin_memory: true
-val_ratio: 0.2
+val_ratio: 0.1
 
 model:
   name: resnet18  # option: resnet18, resnet50, efficientnet_b0, efficientnet_b1
   pretrained: false
-  pretrained_path: /mnt/sharedata/ssd_large/users/liyx/kaggle/meteorite-identification/weights/resnet18-f37072fd.pth  # option: resnet50-0676ba61.pth
+  pretrained_path: /mnt/sharedata/ssd_large/users/liyx/kaggle/meteorite-identification/weights/resnet18-f37072fd.pth  # option: resnet18-f37072fd.pth, resnet50-0676ba61.pth
   dropout: 0.2
 
 loss:
@@ -41,7 +41,7 @@ train:
   monitor: f1
 
 cv:
-  enabled: false
+  enabled: true
   n_folds: 5
   stratified: true
   shuffle: true
