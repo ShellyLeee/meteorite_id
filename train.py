@@ -105,6 +105,10 @@ def _run_cross_validation(cfg: dict[str, Any], output_dir: Path, device) -> None
     if n_folds < 2:
         raise ValueError("cv.n_folds must be >= 2 when cv.enabled=true")
 
+    # Save one experiment-level config for downstream inference entrypoints.
+    exp_config_path = save_config(cfg, output_dir)
+    print(f"[CV] Experiment config saved to: {exp_config_path}")
+
     train_dataset_full, val_dataset_full, labels = build_cv_datasets(cfg)
     indices = list(range(len(labels)))
 

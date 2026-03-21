@@ -16,13 +16,21 @@ except ModuleNotFoundError:  # pragma: no cover - local execution fallback
 
 
 def find_latest_config(output_dir: Path) -> Path | None:
-    """Find the most recent config file in the experiment's configs directory."""
+    """Find the most recent config file in experiment root or fold subdirectories."""
     configs_dir = output_dir / "configs"
-    if not configs_dir.exists():
+    candidates: list[Path] = []
+
+    if configs_dir.exists():
+        candidates.extend(configs_dir.glob("config_*.yaml"))
+
+    if not candidates:
+        candidates.extend(output_dir.glob("fold_*/configs/config_*.yaml"))
+
+    if not candidates:
         return None
 
-    config_files = sorted(configs_dir.glob("config_*.yaml"), key=lambda p: p.stat().st_mtime, reverse=True)
-    return config_files[0] if config_files else None
+    candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    return candidates[0]
 
 
 def resolve_exp_args(exp_name: str | None) -> tuple[Path | None, Path | None]:
