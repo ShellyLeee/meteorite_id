@@ -38,7 +38,7 @@ scheduler:
 train:
   epochs: 30
   early_stopping_patience: 10
-  monitor: f1_tuned  # option: f1, f1_tuned
+  monitor: f1
 
 cv:
   enabled: false

@@ -9,9 +9,7 @@ import torch
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 
-
-
-def predict(model, loader, device, threshold: float | None = None):
+def predict(model, loader, device, threshold: float = 0.5):
     model.eval()
     id_to_pred = {}
 
@@ -20,7 +18,7 @@ def predict(model, loader, device, threshold: float | None = None):
             images = images.to(device, non_blocking=True)
 
             outputs = model(images)
-            if threshold is not None and outputs.shape[1] == 2:
+            if outputs.shape[1] == 2:
                 probs = torch.softmax(outputs, dim=1)[:, 1]
                 preds = (probs >= threshold).long().cpu().numpy().tolist()
             else:

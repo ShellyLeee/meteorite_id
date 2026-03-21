@@ -30,33 +30,6 @@ def f1(y_true: list[int], y_pred: list[int]) -> float:
     return float(sk_f1_score(y_true, y_pred, average="binary", zero_division=0))
 
 
-def tune_threshold(
-    y_true: list[int],
-    y_prob: list[float],
-    thresholds: list[float] | None = None,
-) -> tuple[float, float]:
-    """Tune a binary threshold by maximizing validation F1."""
-    if len(y_true) != len(y_prob):
-        raise ValueError("y_true and y_prob must have the same length")
-    if not y_true:
-        return 0.5, 0.0
-
-    if thresholds is None:
-        thresholds = [i / 100 for i in range(20, 81)]
-
-    best_threshold = 0.5
-    best_f1 = float("-inf")
-
-    for threshold in thresholds:
-        preds = [1 if prob >= threshold else 0 for prob in y_prob]
-        score = f1(y_true, preds)
-        if score > best_f1:
-            best_f1 = score
-            best_threshold = float(threshold)
-
-    return best_threshold, float(best_f1)
-
-
 def compute_classification_metrics(y_true: list[int], y_pred: list[int]) -> dict[str, Any]:
     """Compute the full classification metric set."""
     return {

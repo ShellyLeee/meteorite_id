@@ -120,14 +120,9 @@ def main() -> None:
         raise RuntimeError("Checkpoint missing 'model_state_dict'")
 
     model.load_state_dict(checkpoint["model_state_dict"])
-    best_threshold = checkpoint.get("best_threshold")
-    if best_threshold is not None:
-        best_threshold = float(best_threshold)
-        print(f"Using checkpoint threshold: {best_threshold:.2f}")
-    else:
-        print("No threshold found in checkpoint, falling back to argmax prediction.")
+    print("Using fixed threshold: 0.50")
 
-    id_to_pred = predict(model=model, loader=test_loader, device=device, threshold=best_threshold)
+    id_to_pred = predict(model=model, loader=test_loader, device=device, threshold=0.5)
 
     data_root = Path(cfg["data_root"])
     template_csv_path = data_root / cfg["sample_submission_path"]

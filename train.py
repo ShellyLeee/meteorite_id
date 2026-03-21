@@ -70,7 +70,7 @@ def _run_training(
         output_dir=output_dir,
         logger=logger,
         early_stopping_patience=int(train_cfg.get("early_stopping_patience", 5)),
-        monitor=str(train_cfg.get("monitor", "f1_tuned")),
+        monitor=str(train_cfg.get("monitor", "f1")),
         writer=writer,
     )
 
