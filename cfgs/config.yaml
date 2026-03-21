@@ -1,6 +1,6 @@
 seed: 42
 device: cuda:1
-output_dir: ./outputs/resnet50/baseline_v4
+output_dir: ./outputs/resnet18/baseline_v2
 
 data_root: /mnt/sharedata/ssd_large/users/liyx/kaggle/meteorite-identification
 train_csv: train_labels.csv
@@ -13,22 +13,22 @@ image_size: 224
 batch_size: 32
 num_workers: 4
 pin_memory: true
-val_ratio: 0.1
+val_ratio: 0.2
 
 model:
-  name: resnet50  # option: resnet18, resnet50, efficientnet_b0, efficientnet_b1
+  name: resnet18  # option: resnet18, resnet50, efficientnet_b0, efficientnet_b1
   pretrained: false
-  pretrained_path: /mnt/sharedata/ssd_large/users/liyx/resnet50-0676ba61.pth
+  pretrained_path: /mnt/sharedata/ssd_large/users/liyx/kaggle/meteorite-identification/weights/resnet18-f37072fd.pth  # option: resnet50-0676ba61.pth
   dropout: 0.2
 
 loss:
   name: cross_entropy
-  label_smoothing: 0.1
+  label_smoothing: 0.05
 
 optimizer:
   name: adamw
   lr: 0.0002
-  weight_decay: 0.0005
+  weight_decay: 0.0003
 
 scheduler:
   name: cosine
@@ -69,15 +69,15 @@ prediction:
   #     weight: 1.0
 
 aug:
-  train_rrc_scale_min: 0.5
+  train_rrc_scale_min: 0.55
   train_rrc_scale_max: 1.0
   train_flip_p: 0.5
   train_rotation: 20
-  train_jitter_brightness: 0.25
-  train_jitter_contrast: 0.25
-  train_jitter_saturation: 0.25
-  train_jitter_hue: 0.04
-  train_erasing_p: 0.3
+  train_jitter_brightness: 0.2
+  train_jitter_contrast: 0.2
+  train_jitter_saturation: 0.2
+  train_jitter_hue: 0.03
+  train_erasing_p: 0
   train_erasing_scale_min: 0.02
   train_erasing_scale_max: 0.2
   train_erasing_ratio_min: 0.3
