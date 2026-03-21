@@ -48,6 +48,26 @@ cv:
   seed: 42
   fold: -1  # -1 means run all folds
 
+prediction:
+  threshold: 0.5
+  aggregation: mean
+  # Optional. If empty, test.py will auto-resolve from --exp:
+  # - fold_*/best_model.pt (CV ensemble) or
+  # - best_model.pt (single model)
+  # For manual control, define each source below.
+  sources: []
+  # sources:
+  #   - model_name: resnet50
+  #     checkpoint_path: ./outputs/resnet50/baseline/fold_0/best_model.pt
+  #     fold: 0
+  #     seed: 42
+  #     weight: 1.0
+  #   - model_name: resnet50
+  #     checkpoint_path: ./outputs/resnet50/baseline/fold_1/best_model.pt
+  #     fold: 1
+  #     seed: 42
+  #     weight: 1.0
+
 aug:
   train_rrc_scale_min: 0.5
   train_rrc_scale_max: 1.0

@@ -56,7 +56,7 @@ Best checkpoint is saved to:
 
 - `<output_dir>/best_model.pt`
 
-## Inference and Submission
+## Inference and Submission (Single / CV / Ensemble)
 
 ```bash
 # By experiment name (auto-resolves config, checkpoint, and output path)
@@ -65,25 +65,52 @@ python test.py --exp resnet50/baseline
 # By experiment path
 python test.py --exp ./outputs/resnet50/baseline
 
-# Legacy mode: specify config, checkpoint, and output path manually
+# Specify config directly (sources from config)
+python test.py --config cfgs/config.yaml
+
+# Single-checkpoint override (highest priority)
 python test.py \
   --config cfgs/config.yaml \
   --checkpoint outputs/resnet50/baseline/best_model.pt \
   --output_path outputs/resnet50/baseline/submission.csv
 ```
 
-When using `--exp`, the following are auto-resolved from the experiment directory:
-- **Config**: latest `configs/config_*.yaml`
-- **Checkpoint**: `best_model.pt`
-- **Output**: `submission.csv` (in the experiment directory)
+### Prediction Source Resolution Priority
+
+1. `--checkpoint` (single source override)
+2. `prediction.sources` (or top-level `prediction_sources`) in config
+3. `--exp` auto-discovery:
+   - `fold_*/best_model.pt` -> CV ensemble
+   - fallback `best_model.pt` -> single model
+
+### Config-driven Ensemble
+
+Use config to manage prediction sources (no hardcoded path in code):
+
+```yaml
+prediction:
+  threshold: 0.5
+  aggregation: mean
+  sources:
+    - model_name: resnet50
+      checkpoint_path: ./outputs/resnet50/cv_exp/fold_0/best_model.pt
+      fold: 0
+      seed: 42
+      weight: 1.0
+    - model_name: resnet50
+      checkpoint_path: ./outputs/resnet50/cv_exp/fold_1/best_model.pt
+      fold: 1
+      seed: 42
+      weight: 1.0
+```
 
 Workflow:
 
 1. Build test dataloader from `test_images`
-2. Load trained checkpoint
-3. Predict labels for each test image
-4. Map predictions to `sample_submission.csv` ids
-5. Save final CSV
+2. For each source: load model + checkpoint and predict binary probability
+3. Aggregate probabilities with weighted mean (`aggregation: mean`)
+4. Apply threshold (`threshold`, default `0.5`) to get final labels
+5. Map to `sample_submission.csv` ids and save final CSV
 
 ## GPU Configuration
 
