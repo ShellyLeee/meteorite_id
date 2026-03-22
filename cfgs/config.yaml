@@ -41,7 +41,7 @@ train:
   monitor: f1
 
 cv:
-  enabled: true
+  enabled: false
   n_folds: 5
   stratified: true
   shuffle: true
